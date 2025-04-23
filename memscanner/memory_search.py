@@ -1,9 +1,7 @@
-import struct
 import subprocess
+import struct
 import sys
-from typing import List, Tuple
 
-# Holen der Prozess-ID (PID) eines Prozesses anhand des Namens
 def get_pid(process_name: str) -> int:
     try:
         pid = int(subprocess.check_output(["pgrep", "-n", process_name]).strip())
@@ -12,48 +10,56 @@ def get_pid(process_name: str) -> int:
         print(f"Prozess '{process_name}' nicht gefunden.")
         sys.exit(1)
 
-# Holen der Speicherbereiche des Prozesses
-def get_memory_regions(pid: int) -> List[Tuple[int, int]]:
-    regions = []
-    with open(f"/proc/{pid}/maps", "r") as maps:
-        for line in maps:
-            parts = line.split()
-            addr, perms = parts[0], parts[1]
-            if 'r' in perms and 'w' not in perms:  # Nur lesbare Bereiche ohne Schreibrechte
-                start, end = (int(x, 16) for x in addr.split('-'))
-                regions.append((start, end))
-    return regions
+def scan_entire_memory(pid: int, value: int) -> list:
+    candidates = []
+    packed = struct.pack('<B', value)
 
-# Durchsuchen eines Speicherbereichs nach einem bestimmten Wert
-def scan_region(pid: int, start: int, end: int, value: int, size: int = 1) -> List[int]:
-    matches = []
-    with open(f"/proc/{pid}/mem", "rb", 0) as mem:
-        mem.seek(start)
-        length = end - start
-        chunk = mem.read(length)
-        packed = struct.pack('<I' if size == 4 else '<B', value)
-        for i in range(len(chunk) - size + 1):  # Durchsuche den gesamten Chunk
-            if chunk[i:i + size] == packed:  # Exakte Übereinstimmung
-                matches.append(start + i)
-    return matches
+    try:
+        with open(f"/proc/{pid}/mem", "rb", 0) as mem, open(f"/proc/{pid}/maps") as maps:
+            for line in maps:
+                parts = line.split()
+                addr_range = parts[0]
+                perms = parts[1]
 
-# Initialer Scan aller Speicherregionen nach einem Wert
-def initial_scan(pid: int, regions: List[Tuple[int, int]], value: int) -> List[int]:
-    size = 4 if value > 255 else 1  # Automatische Entscheidung (Byte für <= 255, Word für > 255)
-    results = []
-    for (s, e) in regions:
-        results += scan_region(pid, s, e, value, size)
-    return results
+                if 'r' not in perms:
+                    continue  # Nur lesbare Bereiche
 
-# Filtere die Kandidaten nach einem neuen Wert
-def filter_scan(pid: int, candidates: List[int], new_value: int) -> List[int]:
-    size = 4 if new_value > 255 else 1  # Automatische Entscheidung (Byte für <= 255, Word für > 255)
-    packed = struct.pack('<I' if size == 4 else '<B', new_value)
+                start, end = (int(x, 16) for x in addr_range.split('-'))
+                mem.seek(start)
+                try:
+                    chunk = mem.read(end - start)
+                except (OSError, IOError):
+                    continue  # Bereich kann nicht gelesen werden
+
+                offset = 0
+                while True:
+                    idx = chunk.find(packed, offset)
+                    if idx == -1:
+                        break
+                    candidates.append(start + idx)
+                    offset = idx + 1
+    except Exception as e:
+        print(f"Fehler beim Scannen des Speichers: {e}")
+        sys.exit(1)
+
+    return candidates
+
+def filter_candidates(pid: int, candidates: list, new_value: int) -> list:
+    packed = struct.pack('<B', new_value)
     new_hits = []
-    with open(f"/proc/{pid}/mem", "rb", 0) as mem:
-        for addr in candidates:
-            mem.seek(addr)
-            data = mem.read(size)
-            if data == packed:
-                new_hits.append(addr)
+
+    try:
+        with open(f"/proc/{pid}/mem", "rb", 0) as mem:
+            for addr in candidates:
+                try:
+                    mem.seek(addr)
+                    data = mem.read(1)
+                    if data == packed:
+                        new_hits.append(addr)
+                except (OSError, IOError):
+                    continue
+    except Exception as e:
+        print(f"Fehler beim Filtern der Adressen: {e}")
+        sys.exit(1)
+
     return new_hits
