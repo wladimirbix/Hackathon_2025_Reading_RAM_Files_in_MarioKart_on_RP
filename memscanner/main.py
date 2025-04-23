@@ -1,5 +1,5 @@
 import sys
-from memory_search import get_pid, get_memory_regions, initial_scan, filter_scan
+from memscanner.memory_search import get_pid, get_memory_regions, initial_scan, filter_scan
 
 # Eingabeaufforderung für die Zahl (für die erste Eingabe oder für den neuen Wert)
 def prompt_int(message: str) -> int:
