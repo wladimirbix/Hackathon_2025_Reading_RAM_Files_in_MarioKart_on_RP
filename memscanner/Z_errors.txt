@@ -1,2 +1,3 @@
-sudo python3 ram_reader.py 7224 0x80165F5E byte
-Fehler beim Lesen der Adresse 0x80165F5E: [Errno 5] Input/output error
+ps aux | grep retroarch
+user        7224 12.5 13.8 1686944 538120 pts/2  SLl+ 14:05  14:37 /opt/retropie/emulators/retroarch/bin/retroarch -L /opt/retropie/libretrocores/lr-mupen64plus-next/mupen64plus_next_libretro.so --config /opt/retropie/configs/n64/retroarch.cfg /home/user/RetroPie/roms/n64/Mario Kart 64 (Europe).z64 --appendconfig /dev/shm/retroarch.cfg
+user       14082  0.0  0.0   6092  2004 pts/1    S+   16:01   0:00 grep --color=auto retroarch
