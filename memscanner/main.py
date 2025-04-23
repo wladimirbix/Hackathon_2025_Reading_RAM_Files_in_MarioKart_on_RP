@@ -1,30 +1,34 @@
 import sys
-import time
-from scanner.process import get_pid, get_memory_regions
-from scanner.memory import initial_scan, filter_scan
-from scanner.utils import prompt_int
+from memory_search import get_pid, get_memory_regions, initial_scan, filter_scan
+
+# Eingabeaufforderung für die Zahl (für die erste Eingabe oder für den neuen Wert)
+def prompt_int(message: str) -> int:
+    while True:
+        try:
+            return int(input(message))
+        except ValueError:
+            print("Bitte eine gültige Zahl eingeben.")
 
 def main():
-    if len(sys.argv) < 3:
-        print("Usage: python3 main.py <Prozessname> <byte|word>")
+    if len(sys.argv) < 2:
+        print("Usage: python3 main.py <Prozessname>")
         sys.exit(1)
 
     proc_name = sys.argv[1]
-    mode = sys.argv[2].lower()
-    size = 1 if mode == 'byte' else 4
 
     pid = get_pid(proc_name)
     print(f"[+] Gefundene PID: {pid}")
     regions = get_memory_regions(pid)
 
-    val = prompt_int("Erster Wert eingeben (z.B. 1): ")
-    candidates = initial_scan(pid, regions, val, size)
+    val = prompt_int("Erster Wert eingeben (z.B. 2): ")
+    candidates = initial_scan(pid, regions, val)
     print(f"[+] Initial: {len(candidates)} Treffer gefunden.")
 
+    # Schleife für die weiteren Scans
     while len(candidates) > 1:
         input("Position im Spiel ändern, dann ENTER drücken …")
         val = prompt_int("Neuer Wert: ")
-        candidates = filter_scan(pid, candidates, val, size)
+        candidates = filter_scan(pid, candidates, val)
         print(f"[+] {len(candidates)} Treffer verbleiben.")
 
     if candidates:
