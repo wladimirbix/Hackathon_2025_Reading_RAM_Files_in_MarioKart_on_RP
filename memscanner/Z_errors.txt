@@ -1,16 +1,2 @@
-sudo python3 main.py retroarch
-[+] Gefundene PID: 7224
-Erster Wert eingeben (z.B. 2): 2
-Traceback (most recent call last):
-  File "/home/user/Desktop/python_code/memscanner/main.py", line 40, in <module>
-    main()
-  File "/home/user/Desktop/python_code/memscanner/main.py", line 24, in main
-    candidates = initial_scan(pid, regions, val)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/Desktop/python_code/memscanner/memory_search.py", line 45, in initial_scan
-    results += scan_region(pid, s, e, value, size)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/user/Desktop/python_code/memscanner/memory_search.py", line 33, in scan_region
-    chunk = mem.read(length)
-            ^^^^^^^^^^^^^^^^
-OSError: [Errno 5] Input/output error
+sudo python3 ram_reader.py 7224 0x80165F5E byte
+Fehler beim Lesen der Adresse 0x80165F5E: [Errno 5] Input/output error
