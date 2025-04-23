@@ -1,6 +1,6 @@
 import psutil
-import ctypes
-import time
+import os
+import struct
 
 # Funktion zum Abrufen des Prozesses
 def get_process_by_name(name):
@@ -19,18 +19,18 @@ def search_memory_in_process(process_name, target_value):
     addresses = []
     try:
         pid = process.info['pid']
-        process_handle = ctypes.windll.kernel32.OpenProcess(0x10, False, pid)  # 0x10 bedeutet PROCESS_VM_READ
-        if process_handle:
-            # Wir gehen davon aus, dass der Wert in einem bestimmten Bereich gespeichert ist
+        # Der Pfad zum Speicherauszug des Prozesses
+        mem_file_path = f"/proc/{pid}/mem"
+        
+        with open(mem_file_path, "rb") as mem_file:
+            # Wir lesen den Speicherbereich in kleinen Teilen
             for address in range(0x10000000, 0x10010000, 4):  # Beispielbereich
-                buffer = ctypes.create_string_buffer(4)
-                bytes_read = ctypes.c_size_t()
-                ctypes.windll.kernel32.ReadProcessMemory(process_handle, address, buffer, ctypes.sizeof(buffer), ctypes.byref(bytes_read))
-                if bytes_read.value > 0:
-                    value = ctypes.cast(buffer, ctypes.POINTER(ctypes.c_uint32)).contents.value
+                mem_file.seek(address)
+                data = mem_file.read(4)
+                if len(data) == 4:
+                    value = struct.unpack('I', data)[0]  # 'I' steht für unsigned int
                     if value == target_value:
                         addresses.append(address)
-            ctypes.windll.kernel32.CloseHandle(process_handle)
     except Exception as e:
         print(f"Fehler beim Abrufen des Speichers: {e}")
     return addresses
